@@ -16,7 +16,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ==================== SOZLAMALAR ====================
-OT_TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'zingizning Bot Tokeningizni yozing
+BOT_TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'zingizning Bot Tokeningizni yozing
 ADMIN_ID = 1076674734  # O'zingizning Telegram ID-ingizni yozing (masalan: 123456789)
 SHEET_NAME = "olimpaida_bot"  # Google Drive'dagi jadvalingiz nomi
 CREDENTIALS_FILE = "credentials.json"
