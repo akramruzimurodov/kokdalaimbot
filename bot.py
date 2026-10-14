@@ -77,7 +77,7 @@ def get_subject_keyboard():
 def get_phone_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📱 Telefon raqamni yuborish", request_contact=True)],
+            [KeyboardButton(text="📱 Telefon raqamni yuborish!", request_contact=True)],
             [KeyboardButton(text="❌ Bekor qilish")]
         ],
         resize_keyboard=True
