@@ -160,7 +160,7 @@ async def process_phone_text(message: Message, state: FSMContext, bot: Bot):
 async def finish_registration(message: Message, state: FSMContext, phone: str, bot: Bot):
     user_data = await state.get_data()
     full_name = user_data.get("full_name")
-    grade = user_data.get(="grade" if False else "grade")
+    grade = user_data.get("grade")
     subject = user_data.get("subject")
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -186,6 +186,7 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
     )
 
     try:
+        username_str = f"@{message.from_user.username}" if message.from_user.username else "Yo'q"
         await bot.send_message(
             ADMIN_ID,
             f"🚨 Yangi ishtirokchi!\n\n"
@@ -193,7 +194,7 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
             f"Sinf: {grade}\n"
             f"Fan: {subject}\n"
             f"Tel: {phone}\n"
-            f"Telegram: @{message.from_user.username}" if message.from_user.username else "Username yo'q"
+            f"Telegram: {username_str}"
         )
     except Exception as e:
         logging.error(f"Admin xatosi: {e}")
