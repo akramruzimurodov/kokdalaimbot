@@ -58,6 +58,8 @@ async def process_subject(message: Message, state: FSMContext):
     await message.answer("Telefon raqamingizni yuboring (masalan: +998901234567):")
 
 
+import datetime  # Vaqtni yozish uchun
+
 @router.message(RegistrationStates.phone)
 async def process_phone(message: Message, state: FSMContext):
     phone = message.text
@@ -65,17 +67,23 @@ async def process_phone(message: Message, state: FSMContext):
     
     loading_msg = await message.answer("⏳ Ma'lumotlaringiz saqlanmoqda, kuting...")
     
+    # Hozirgi vaqtni olish
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    user_id = str(message.from_user.id)
+    
     def save_to_sheet():
         sheet = gc.open(SHEET_NAME).sheet1
+        # Jadvaldagi 6 ta ustunga moslab 6 ta qiymat yuboramiz:
         sheet.append_row([
             user_data.get('full_name'),
             user_data.get('grade'),
             user_data.get('subject'),
-            phone
+            phone,
+            now,
+            user_id
         ])
 
     try:
-        # Google Sheetsga yozishni alohida oqimda (thread) bajarish bot qotishining oldini oladi
         await asyncio.to_thread(save_to_sheet)
         
         await loading_msg.delete()
@@ -88,8 +96,9 @@ async def process_phone(message: Message, state: FSMContext):
             await loading_msg.delete()
         except:
             pass
-        await message.answer("❌ Xatolik yuzaga keldi. Qaytadan urinib ko'ring yoki adminga murojaat qiling.")
+        await message.answer(f"❌ Xatolik yuzaga keldi: {e}")
         await state.clear()
+
 
 
 # Render Web Server (Keep-alive uchun)
