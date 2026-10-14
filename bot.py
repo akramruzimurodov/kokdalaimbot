@@ -11,8 +11,8 @@ from aiogram.types import Message
 import gspread
 from aiohttp import web
 
-# --- SOZLAMALAR ---
-TOKEN = os.getenv("8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk")  # Render Environment Variables dan olinadi
+TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'z tokeningizni yozing
+
 SHEET_NAME = "olimpaida_bot"   # Google Sheets jadvalingiz nomi
 
 # gspread avtorizatsiyasi (credentials.json orqali)
