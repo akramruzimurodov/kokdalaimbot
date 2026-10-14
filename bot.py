@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import os
 import re
 from datetime import datetime
+from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -168,7 +170,6 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
     loading_msg = await message.answer("Ma'lumotlaringiz saqlanmoqda, kuting...", reply_markup=ReplyKeyboardRemove())
 
     try:
-        # Google Sheets'ga asinxron tarzda yozish
         def save_to_sheet():
             sheet = _get_sheet()
             sheet.append_row([full_name, grade, subject, phone, current_time, username_str])
@@ -207,9 +208,25 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
 
     await state.clear()
 
+# Render uchun oddiy web server (Port ochish va statusni Live qilish uchun)
+async def handle(request):
+    return web.Response(text="Bot is running!")
+
+async def web_server():
+    app = web.Application()
+    app.add_routes([web.get("/", handle)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    
+    # Render beradigan PORT'ni olamiz, agar bo'lmasa 10000-portni ishlatamiz
+    port = int(os.environ.get("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
 async def main():
     bot = Bot(token=BOT_TOKEN)
-    await dp.start_polling(bot)
+    # Veb server va Telegram bot polling'ni bir vaqtda ishga tushiramiz
+    await asyncio.gather(web_server(), dp.start_polling(bot))
 
 if __name__ == "__main__":
     asyncio.run(main())
