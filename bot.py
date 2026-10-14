@@ -171,14 +171,20 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
 
     try:
         def save_to_sheet():
-            sheet = _get_sheet()
+            scope = [
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive"
+            ]
+            creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
+            client = gspread.authorize(creds)
+            sheet = client.open(SHEET_NAME).sheet1
             sheet.append_row([full_name, grade, subject, phone, current_time, username_str])
 
         await asyncio.to_thread(save_to_sheet)
 
     except Exception as e:
         logging.error(f"Google Sheets xatosi: {e}")
-        await loading_msg.edit_text(f"❌ Xatolik yuz berdi: {e}")
+        await loading_msg.edit_text(f"❌ Xatolik yuz berdi: {str(e)}")
         await state.clear()
         return
 
@@ -192,23 +198,9 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
         "Olimpiadada omad tilaymiz!"
     )
 
-    try:
-        if ADMIN_ID != 123456789:
-            await bot.send_message(
-                ADMIN_ID,
-                f"🚨 Yangi ishtirokchi!\n\n"
-                f"Ism: {full_name}\n"
-                f"Sinf: {grade}\n"
-                f"Fan: {subject}\n"
-                f"Tel: {phone}\n"
-                f"Telegram: {username_str}"
-            )
-    except Exception as e:
-        logging.error(f"Admin xatosi: {e}")
-
     await state.clear()
 
-# Render uchun oddiy web server (Port ochish va statusni Live qilish uchun)
+# Render uchun web server
 async def handle(request):
     return web.Response(text="Bot is running!")
 
@@ -217,15 +209,12 @@ async def web_server():
     app.add_routes([web.get("/", handle)])
     runner = web.AppRunner(app)
     await runner.setup()
-    
-    # Render beradigan PORT'ni olamiz, agar bo'lmasa 10000-portni ishlatamiz
     port = int(os.environ.get("PORT", 10000))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
-    # Veb server va Telegram bot polling'ni bir vaqtda ishga tushiramiz
     await asyncio.gather(web_server(), dp.start_polling(bot))
 
 if __name__ == "__main__":
