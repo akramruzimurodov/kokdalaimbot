@@ -10,6 +10,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 import gspread
 from aiohttp import web
+import datetime  # Vaqtni yozish uchun
 
 TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'z tokeningizni yozing
 
