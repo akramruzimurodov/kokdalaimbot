@@ -17,7 +17,10 @@ TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'z tokeningizni yoz
 SHEET_NAME = "olimpaida_bot"   # Google Sheets jadvalingiz nomi
 
 # gspread avtorizatsiyasi (credentials.json orqali)
-gc = gspread.service_account(filename="credentials.json")
+# gspread avtorizatsiyasi (Render Secret Files yoki lokal faylni avtomatik topish)
+cred_path = "/etc/secrets/credentials.json" if os.path.exists("/etc/secrets/credentials.json") else "credentials.json"
+gc = gspread.service_account(filename=cred_path)
+
 
 # Bot va Dispatcher
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
