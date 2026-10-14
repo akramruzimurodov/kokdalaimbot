@@ -22,7 +22,7 @@ SHEET_NAME = "olimpaida_bot"  # Google Drive'dagi jadvalingiz nomi
 CREDENTIALS_FILE = "credentials.json"
 # ====================================================
 
-# Logging (Loglarni kuzatish uchun)
+# Logging
 logging.basicConfig(level=logging.INFO)
 
 # Google Sheets ulanish funksiyasi
@@ -35,7 +35,7 @@ def get_google_sheet():
     client = gspread.authorize(creds)
     return client.open(SHEET_NAME).sheet1
 
-# FSM (Holatlar ketma-ketligi)
+# FSM Holatlari
 class OlympiadState(StatesGroup):
     full_name = State()
     grade = State()
@@ -81,34 +81,128 @@ def get_phone_keyboard():
         resize_keyboard=True
     )
 
-# Bekor qilish komandasi
+# Bekor qilish
 @dp.message(F.text == "❌ Bekor qilish")
 @dp.message(Command("cancel"))
 async def cancel_handler(message: Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
-        await message.answer("Xech qanday jarayon yo'q.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Hech qanday jarayon yo'q.", reply_markup=ReplyKeyboardRemove())
         return
     await state.clear()
     await message.answer("Ro'yxatdan o'tish bekor qilindi. Qayta boshlash uchun /start bosing.", reply_markup=ReplyKeyboardRemove())
 
-# /start komandasi
+# /start
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
-        f"Assalomu alaykum, **{message.from_user.full_name}**!\n"
+        f"Assalomu alaykum, {message.from_user.full_name}!\n"
         "Maktabimiz olimpiadasiga ro'yxatdan o'tish botiga xush kelibsiz.\n\n"
-        "Iltimos, Ism va Familiyangizni kiriting (Masalan: *Aliyev Alisher*):",
-        parse_mode="Markdown",
+        "Iltimos, Ism va Familiyangizni kiriting (Masalan: Aliyev Alisher):",
         reply_markup=get_cancel_keyboard()
     )
     await state.set_state(OlympiadState.full_name)
 
-# 1. Ism-familiya qabul qilish
+# 1. Ism-familiya
 @dp.message(OlympiadState.full_name)
 async def process_full_name(message: Message, state: FSMContext):
     name_text = message.text.strip()
     if len(name_text.split()) < 2:
         await message.answer(
-            "⚠️ Iltimos, ham **Ism** va ham **Familiya**ngizni kiriting (Masalan: Aliyev Alisher
+            "Iltimos, ham Ism va ham Familiyangizni kiriting (Masalan: Aliyev Alisher):",
+            reply_markup=get_cancel_keyboard()
+        )
+        return
+    
+    await state.update_data(full_name=name_text)
+    await message.answer("Sinfingizni tanlang yoki yozib yuboring:", reply_markup=get_grade_keyboard())
+    await state.set_state(OlympiadState.grade)
+
+# 2. Sinf
+@dp.message(OlympiadState.grade)
+async def process_grade(message: Message, state: FSMContext):
+    await state.update_data(grade=message.text.strip())
+    await message.answer("Qaysi fan bo'yicha olimpiadada qatnashasiz? Fanni tanlang:", reply_markup=get_subject_keyboard())
+    await state.set_state(OlympiadState.subject)
+
+# 3. Fan
+@dp.message(OlympiadState.subject)
+async def process_subject(message: Message, state: FSMContext):
+    await state.update_data(subject=message.text.strip())
+    await message.answer(
+        "Bog'lanish uchun telefon raqamingizni kiriting yoki pastdagi tugma orqali yuboring:",
+        reply_markup=get_phone_keyboard()
+    )
+    await state.set_state(OlympiadState.phone)
+
+# 4. Telefon (Kontakt)
+@dp.message(OlympiadState.phone, F.contact)
+async def process_phone_contact(message: Message, state: FSMContext, bot: Bot):
+    phone = message.contact.phone_number
+    if not phone.startswith("+"):
+        phone = "+" + phone
+    await finish_registration(message, state, phone, bot)
+
+# 4. Telefon (Matn)
+@dp.message(OlympiadState.phone)
+async def process_phone_text(message: Message, state: FSMContext, bot: Bot):
+    phone = message.text.strip()
+    if not re.match(r"^\+?[0-9]{9,15}$", phone):
+        await message.answer(
+            "Iltimos, to'g'ri telefon raqam kiriting (Masalan: +998901234567):",
+            reply_markup=get_phone_keyboard()
+        )
+        return
+    await finish_registration(message, state, phone, bot)
+
+# Saqlash
+async def finish_registration(message: Message, state: FSMContext, phone: str, bot: Bot):
+    user_data = await state.get_data()
+    full_name = user_data.get("full_name")
+    grade = user_data.get(="grade" if False else "grade")
+    subject = user_data.get("subject")
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    loading_msg = await message.answer("Ma'lumotlaringiz saqlanmoqda, kuting...", reply_markup=ReplyKeyboardRemove())
+
+    try:
+        sheet = get_google_sheet()
+        sheet.append_row([full_name, grade, subject, phone, current_time, f"@{message.from_user.username}" if message.from_user.username else "Yo'q"])
+    except Exception as e:
+        logging.error(f"Xatolik: {e}")
+        await loading_msg.edit_text("❌ Texnik xatolik yuz berdi. Iltimos, /start bosing.")
+        await state.clear()
+        return
+
+    await loading_msg.edit_text(
+        "Muvaffaqiyatli ro'yxatdan o'tdingiz!\n\n"
+        f"Ism: {full_name}\n"
+        f"Sinf: {grade}\n"
+        f"Fan: {subject}\n"
+        f"Tel: {phone}\n"
+        f"Vaqt: {current_time}\n\n"
+        "Olimpiadada omad tilaymiz!"
+    )
+
+    try:
+        await bot.send_message(
+            ADMIN_ID,
+            f"🚨 Yangi ishtirokchi!\n\n"
+            f"Ism: {full_name}\n"
+            f"Sinf: {grade}\n"
+            f"Fan: {subject}\n"
+            f"Tel: {phone}\n"
+            f"Telegram: @{message.from_user.username}" if message.from_user.username else "Username yo'q"
+        )
+    except Exception as e:
+        logging.error(f"Admin xatosi: {e}")
+
+    await state.clear()
+
+async def main():
+    bot = Bot(token=BOT_TOKEN)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
