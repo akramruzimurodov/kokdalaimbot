@@ -16,7 +16,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ==================== SOZLAMALAR ====================
-BOT_TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'zingizning Bot Tokeningizni yozing
+OT_TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'zingizning Bot Tokeningizni yozing
 ADMIN_ID = 1076674734  # O'zingizning Telegram ID-ingizni yozing (masalan: 123456789)
 SHEET_NAME = "olimpaida_bot"  # Google Drive'dagi jadvalingiz nomi
 CREDENTIALS_FILE = "credentials.json"
@@ -26,7 +26,7 @@ CREDENTIALS_FILE = "credentials.json"
 logging.basicConfig(level=logging.INFO)
 
 # Google Sheets ulanish funksiyasi
-def get_google_sheet():
+def _get_sheet():
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
@@ -163,15 +163,21 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
     grade = user_data.get("grade")
     subject = user_data.get("subject")
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    username_str = f"@{message.from_user.username}" if message.from_user.username else "Yo'q"
 
     loading_msg = await message.answer("Ma'lumotlaringiz saqlanmoqda, kuting...", reply_markup=ReplyKeyboardRemove())
 
     try:
-        sheet = get_google_sheet()
-        sheet.append_row([full_name, grade, subject, phone, current_time, f"@{message.from_user.username}" if message.from_user.username else "Yo'q"])
+        # Google Sheets'ga asinxron tarzda yozish
+        def save_to_sheet():
+            sheet = _get_sheet()
+            sheet.append_row([full_name, grade, subject, phone, current_time, username_str])
+
+        await asyncio.to_thread(save_to_sheet)
+
     except Exception as e:
-        logging.error(f"Xatolik: {e}")
-        await loading_msg.edit_text("❌ Texnik xatolik yuz berdi. Iltimos, /start bosing.")
+        logging.error(f"Google Sheets xatosi: {e}")
+        await loading_msg.edit_text(f"❌ Xatolik yuz berdi: {e}")
         await state.clear()
         return
 
@@ -186,16 +192,16 @@ async def finish_registration(message: Message, state: FSMContext, phone: str, b
     )
 
     try:
-        username_str = f"@{message.from_user.username}" if message.from_user.username else "Yo'q"
-        await bot.send_message(
-            ADMIN_ID,
-            f"🚨 Yangi ishtirokchi!\n\n"
-            f"Ism: {full_name}\n"
-            f"Sinf: {grade}\n"
-            f"Fan: {subject}\n"
-            f"Tel: {phone}\n"
-            f"Telegram: {username_str}"
-        )
+        if ADMIN_ID != 123456789:
+            await bot.send_message(
+                ADMIN_ID,
+                f"🚨 Yangi ishtirokchi!\n\n"
+                f"Ism: {full_name}\n"
+                f"Sinf: {grade}\n"
+                f"Fan: {subject}\n"
+                f"Tel: {phone}\n"
+                f"Telegram: {username_str}"
+            )
     except Exception as e:
         logging.error(f"Admin xatosi: {e}")
 
