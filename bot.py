@@ -129,7 +129,17 @@ async def process_phone(message: Message, state: FSMContext):
         if not phone.startswith("+"):
             phone = "+" + phone
     else:
-        phone = message.text
+        phone = message.text.strip()
+        # Telefon raqam formatini tekshirish (masalan: +998901234567 yoki 998901234567)
+        # Raqam ekanligini va uzunligi mos kelishini oddiy tekshiruvdan o'tkazamiz
+        clean_phone = phone.replace("+", "")
+        if not clean_phone.isdigit() or len(clean_phone) < 9:
+            await message.answer(
+                "❌ <b>Noto'g'ri format!</b>\n\n"
+                "Iltimos, haqiqiy telefon raqamini kiriting (masalan: <i>+998901234567</i>) yoki pastdagi <b>\"📱 Telefon raqamni yuborish\"</b> tugmasini bosing:",
+                reply_markup=phone_kb
+            )
+            return
 
     user_data = await state.get_data()
     
