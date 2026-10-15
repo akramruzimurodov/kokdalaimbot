@@ -1,33 +1,27 @@
 import asyncio
 import logging
 import os
-from aiogram import Bot, Dispatcher, F, Router, html
+import datetime
+from aiogram import Bot, Dispatcher, Router, html
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
-import gspread
+import aiohttp
 from aiohttp import web
-import datetime  # Vaqtni yozish uchun
 
-TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"  # O'z tokeningizni yozing
+TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"
 
-SHEET_NAME = "olimpaida_bot"   # Google Sheets jadvalingiz nomi
-
-# gspread avtorizatsiyasi (credentials.json orqali)
-# gspread avtorizatsiyasi (Render Secret Files yoki lokal faylni avtomatik topish)
-cred_path = "/etc/secrets/credentials.json" if os.path.exists("/etc/secrets/credentials.json") else "credentials.json"
-gc = gspread.service_account(filename=cred_path)
-
+# 2-qadamda Google Apps Script'dan olgan Web App havolangizni shu yerga qo'ying:
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwnrv0OsJ5LjYt3-M8ANfZ0hmfymRlNXhUK4eUijGmaVdp7CUnvdIfbmAQCPupL5gZQ/exec"
 
 # Bot va Dispatcher
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 router = Router()
 
-# Ro'yxatdan o'tish bosqichlari (FSM)
 class RegistrationStates(StatesGroup):
     full_name = State()
     grade = State()
@@ -62,8 +56,6 @@ async def process_subject(message: Message, state: FSMContext):
     await message.answer("Telefon raqamingizni yuboring (masalan: +998901234567):")
 
 
-import datetime  # Vaqtni yozish uchun
-
 @router.message(RegistrationStates.phone)
 async def process_phone(message: Message, state: FSMContext):
     phone = message.text
@@ -71,27 +63,28 @@ async def process_phone(message: Message, state: FSMContext):
     
     loading_msg = await message.answer("⏳ Ma'lumotlaringiz saqlanmoqda, kuting...")
     
-    # Hozirgi vaqtni olish
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     user_id = str(message.from_user.id)
     
-    def save_to_sheet():
-        sheet = gc.open(SHEET_NAME).sheet1
-        # Jadvaldagi 6 ta ustunga moslab 6 ta qiymat yuboramiz:
-        sheet.append_row([
-            user_data.get('full_name'),
-            user_data.get('grade'),
-            user_data.get('subject'),
-            phone,
-            now,
-            user_id
-        ])
+    payload = {
+        "full_name": user_data.get('full_name'),
+        "grade": user_data.get('grade'),
+        "subject": user_data.get('subject'),
+        "phone": phone,
+        "time": now,
+        "user_id": user_id
+    }
 
     try:
-        await asyncio.to_thread(save_to_sheet)
-        
-        await loading_msg.delete()
-        await message.answer("✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!")
+        # Google Sheets'ga HTTP POST so'rov yuborish
+        async with aiohttp.ClientSession() as session:
+            async with session.post(WEB_APP_URL, json=payload) as response:
+                if response.status == 200:
+                    await loading_msg.delete()
+                    await message.answer("✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!")
+                else:
+                    raise Exception(f"Server javobi: {response.status}")
+                    
         await state.clear()
         
     except Exception as e:
@@ -100,9 +93,8 @@ async def process_phone(message: Message, state: FSMContext):
             await loading_msg.delete()
         except:
             pass
-        await message.answer(f"❌ Xatolik yuzaga keldi: {e}")
+        await message.answer("❌ Xatolik yuzaga keldi. Qaytadan urinib ko'ring.")
         await state.clear()
-
 
 
 # Render Web Server (Keep-alive uchun)
@@ -121,11 +113,9 @@ async def web_server():
 
 async def main():
     dp.include_router(router)
-    # Veb server va bot polling'ni bir vaqtning o'zida ishga tushirish
     await asyncio.gather(web_server(), dp.start_polling(bot))
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=open("/dev/null", "w") if False else None) # oddiy log
+If __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
-    
