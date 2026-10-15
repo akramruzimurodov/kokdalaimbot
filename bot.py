@@ -116,6 +116,6 @@ async def main():
     await asyncio.gather(web_server(), dp.start_polling(bot))
 
 
-If __name__ == "__main__":
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
