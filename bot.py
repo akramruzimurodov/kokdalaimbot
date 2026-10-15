@@ -148,7 +148,8 @@ async def process_phone(message: Message, state: FSMContext):
         reply_markup=ReplyKeyboardRemove()
     )
     
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # O'zbekiston vaqtini to'g'ri chiqarish uchun UTC vaqtiga 5 soat qo'shamiz
+    now = (datetime.datetime.utcnow() + datetime.timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
     user_id = str(message.from_user.id)
     
     payload = {
