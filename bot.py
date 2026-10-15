@@ -13,7 +13,7 @@ import aiohttp
 from aiohttp import web
 
 TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwnrv0OsJ5LjYt3-M8ANfZ0hmfymRlNXhUK4eUijGmaVdp7CUnvlfbmAQCPupL5gZQ/exec"
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyAk2ET-Q_NDc9jA_pz5bl1kMzwdvRwiaqkLMMKR-P3i4ypEDWpQftOOXlXDPc6vKScbg/exec"
 
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
