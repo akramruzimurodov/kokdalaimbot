@@ -12,7 +12,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKey
 import aiohttp
 from aiohttp import web
 
-TOKEN = "8725942855:AAFuJ2tNUc5y8in4UQM25zMC9Wg0HLlUnzk"
+TOKEN = "8725942855:AAEfTLypd_FisVQfEJCUZ0P2FfK2arcGi5U"
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyAk2ET-Q_NDc9jA_pz5bl1kMzwdvRwiaqkLMMKR-P3i4ypEDWpQftOOXlXDPc6vKScbg/exec"
 
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
